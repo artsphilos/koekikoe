@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css">
+    <title>KOE KI KOE</title>
+
+    <style>
+        html {
+            font-size: 100%;
+        }
+
+        input {
+            font-size: 100%;
+        }
+
+        .before_style {
+            color: #000000;
+            font-size: 120%;
+            width: 600px;
+            height: 200px;
+        }
+
+        .result_style {
+            color: #888888;
+            font-size: 100%;
+            width: 600px;
+            height: 140px;
+            padding: 0px 8px 0px 8px;
+        }
+
+        .speak_style {
+            color: #000000;
+            font-size: 120%;
+            width: 600px;
+            height: 200px;
+        }
+
+        .speech_style {
+            color: #ff0000;
+            font-size: 100%;
+            width: 600px;
+            height: 60px;
+            padding: 0px 8px 0px 8px;
+        }
+
+        .status_style {
+            display: inline-block;
+            _display: inline;
+            color: #444444;
+            font-size: 100%;
+            font-weight: bold;
+        }
+
+        .bd-highlight {
+            background-color: #F8F8F8;
+            border: 1px dotted #AAAAAA;
+        }
+    </style>
+
+    <script>
+
+        var flag_speech = 0;
+        var flag_block = 1;
+        var stock_text = " ";
+        var speak1 = '';
+        var speak2 = '';
+        var speak3 = '';
+
+        function cp_text() {
+
+            var rep = stock_text;
+            var listener = function (e) {
+
+                e.clipboardData.setData("text/plain", rep);
+                //元のイベントをキャンセル
+                e.preventDefault();
+                //終わったらデータ削除
+                document.removeEventListener("copy", listener);
+
+            }
+            //コピーイベントが発生したときに、クリップボードに書き込むようにする
+            document.addEventListener("copy", listener);
+            //コピーする
+            document.execCommand("copy");
+        }
+
+
+        function read_voice() {
+
+            window.SpeechRecognition = window.SpeechRecognition || webkitSpeechRecognition;
+            var recognition = new webkitSpeechRecognition();
+            recognition.lang = 'ja';
+            recognition.interimResults = true;
+            recognition.continuous = true;
+
+            recognition.onsoundstart = function () {
+                document.getElementById('status').innerHTML = "　　認識中　　";
+            };
+            recognition.onnomatch = function () {
+                document.getElementById('status').innerHTML = "もう一度試してください";
+            };
+            recognition.onerror = function () {
+                document.getElementById('status').innerHTML = "　　エラー　　";
+                if (flag_speech == 0)
+                    read_voice();
+            };
+            recognition.onsoundend = function () {
+                document.getElementById('status').innerHTML = "　　停止中　　";
+                read_voice();
+            };
+
+
+            recognition.onresult = function (event) {
+
+                var halfway_transcript = '';
+                var results = event.results;
+
+                if (flag_block == 4) { flag_block = 1; document.getElementById('before_text').innerHTML = speak3; }
+                else { speak3 = ""; document.getElementById('before_text').innerHTML = speak2; }
+
+                for (var i = event.resultIndex; i < results.length; i++) {
+                    if (results[i].isFinal) {
+                        var msg = results[i][0].transcript;
+                        speak1 = ' ';
+                        speak1 += msg;
+                        if (flag_block == 3) { speak3 += speak1 + '\r\n'; speak2 = ''; }
+                        speak2 += speak1 + '\r\n';
+                        stock_text += msg + '\r\n';
+
+                        //文章ブロックカウンター
+                        flag_block += 1;
+
+                        read_voice();
+                    }
+                    else {
+                        halfway_transcript += results[i][0].transcript;
+                        document.getElementById('result_text').innerHTML = halfway_transcript;
+                        flag_speech = 1;
+                    }
+                }
+            }
+
+            document.getElementById('start').value = "　△ 解析再開　";
+            flag_speech = 0;
+            document.getElementById('status').innerHTML = "　　待　機　　";
+            recognition.start();
+
+        }
+
+    </script>
+
+</head>
+
+<body>
+    <div class="alert alert-secondary" role="alert">KOE KI KOE</div>
+    <input type="button" id="start" class="btn btn-outline-secondary" onClick="read_voice();" value="　▲ 認識開始　">
+    <button id="copy" class="btn btn-outline-secondary btn-block" onClick="cp_text();">　<i class="bi bi-clipboard"></i> テキストコピー　</button>
+    <button id="status" class="btn btn-secondary btn-block" disabled>　　　<i class="bi bi-mic-mute-fill"></i>　　　</button>
+
+    <hr>
+    <div class="mb-3">
+        <h5><span class="badge rounded-pill bg-secondary">認識結果</span></h5>
+        <textarea class="form-control" id="before_text" class="before_style" rows="6"></textarea>
+    </div>
+
+    <div class="bd-highlight">
+        <div id="result_text" class="result_style">
+            説明：<br>
+            ・音声認識＋音声入力のハイブリッド情報保障で、聞こえない人の通話を支援します。<br>
+            ・最初に「認識開始」ボタンを押して、音声認識を開始します。<br>
+            ・認識精度は発声の明瞭度に比例します。誤認識となった場合、頭の中で補完して下さい。<br>
+            ・話者が交替して音声認識しなくなった場合、「解析再開」ボタンを押して再開できます。<br>
+            ・下の音声入力フォームに、文章を入力し「発声」ボタンを押して読み上げます。<br>
+        </div>
+    </div>
+    <div id="speak_text" class="speech_style"></div>
+    <hr>
+    <div class="mb-3">
+        <h5><span class="badge rounded-pill bg-secondary">音声入力</span></h5>
+        <textarea class="form-control" id="text" class="speak_style" rows="6"></textarea>
+    </div>
+    <button id="speak-switch" accesskey="A" class="btn btn-outline-secondary"><i class="bi bi-caret-right-square"></i>　発声 [Alt+A]</button>
+    <button id="cancel-switch" class="btn btn-outline-secondary"><i class="bi bi-dash-square"></i>　停　止　</button>
+    <button id="pause-switch" class="btn btn-outline-secondary"><i class="bi bi-pause-circle"></i>　一時停止　</button>
+    <button id="resume-switch" class="btn btn-outline-secondary"><i class="bi bi-box-arrow-right"></i>　再　開　</button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW"
+        crossorigin="anonymous"></script>
+
+    <script type="text/javascript">
+
+        const text = document.querySelector('#text')
+        const speakSwitch = document.querySelector('#speak-switch')
+        const cancelSwitch = document.querySelector('#cancel-switch')
+        const pauseSwitch = document.querySelector('#pause-switch')
+        const resumeSwitch = document.querySelector('#resume-switch')
+        const onendSwitch = document.querySelector('#onend-switch')
+
+        speakSwitch.addEventListener('click', function () {
+            // 発声用テキスト
+            const koe = new SpeechSynthesisUtterance(text.value)
+            var speak0 = '';
+            document.getElementById('speak_text').innerHTML = document.getElementById('text').value;
+
+            // 読み上げ
+            speechSynthesis.speak(koe)
+            document.getElementById('text').value = speak0;
+            document.getElementById('text').focus();
+        })
+        cancelSwitch.addEventListener('click', function () {
+            speechSynthesis.cancel()
+        })
+        pauseSwitch.addEventListener('click', function () {
+            speechSynthesis.pause()
+        })
+        resumeSwitch.addEventListener('click', function () {
+            speechSynthesis.resume()
+        })
+
+    </script>
+    <hr>
+© 2021 artsphilos All Rights Reserved. MIT License. Not Delete Credits.
+</body>
+
+</html>
